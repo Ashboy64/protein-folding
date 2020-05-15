@@ -6,32 +6,43 @@ from parmed.charmm import CharmmParameterSet
 class Molecule(object):
     """Represents a molecule"""
 
-    def __init__(self, pdb_filepath, param_filepath):
+    def __init__(self, psf_filepath, param_filepath):
         super(Molecule, self).__init__()
-        self.pdb = pmd.load_file(pdb_filepath)
+        self.psf = pmd.load_file(psf_filepath)
         self.params = CharmmParameterSet(param_filepath)
-        self.check_atoms()
+        self.initialize_positions()
 
-    def check_atoms(self):
-
+    def initialize_positions(self):
         not_in_params = []
+        self.positions = {}
 
-        for atom in self.pdb.atoms:
-            print(atom.name in self.params.atom_types.keys())
+        counter = 0
+
+        for atom in self.psf.atoms:
+            if atom.type not in self.params.atom_types.keys():
+                not_in_params.append(atom.name)
+            else:
+                self.positions[atom] = [counter, counter, counter]
+                counter += 1
+
+        if len(not_in_params) != 0:
+            print("not_in_params: " + str(not_in_params))
 
     @property
     def bonds(self):
         all = []
-        for bond in self.pdb.bonds:
+        for bond in self.psf.bonds:
             a1 = bond.atom1
             a2 = bond.atom2
-            all.append([(a1.name, a2.name), self.dist(a1, a2)])
+            all.append([(a1.type, a2.type), self.dist(a1, a2)])
         return all
 
     def dist(self, a1, a2):
-        return np.sqrt((a1.xx - a2.xx)**2 + (a1.xy - a2.xy)**2 + (a1.xz - a2.xz)**2)
+        a1_x, a1_y, a1_z = self.positions[a1]
+        a2_x, a2_y, a2_z = self.positions[a2]
+        return np.sqrt((a1_x - a2_x)**2 + (a1_y - a2_y)**2 + (a1_z - a2_z)**2)
 
 
 if __name__ == '__main__':
-    m = Molecule(r'../pdb-files/1l2y.pdb', r'../params/par_all36m_prot.prm')
+    m = Molecule(r'../pdb-files/step1_pdbreader.psf', r'../params/par_all36m_prot.prm')
     print(m.bonds)
