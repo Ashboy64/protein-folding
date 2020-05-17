@@ -19,7 +19,6 @@ class StructurePredictor(object):
     - m.ub: Urey-Bradley component for interaction between 1st and 3rd atoms in triplet. List of triples of atoms and 
             distance between them
     - m.nonbonded: list of pairs of atoms separated by at least 3 bonds
-    
     """
 
     def eval_energy(self, m):

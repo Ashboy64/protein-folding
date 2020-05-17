@@ -29,10 +29,43 @@ class Molecule(object):
             print("not_in_params: " + str(not_in_params))
 
     @property
+    def ub(self):
+        ub_vals = []
+
+        for triplet in self.psf.angles:
+            a_1, a_2, a_3 = triplet.atom1, triplet.atom2, triplet.atom3
+            ub_vals.append([(a_1.type, a_2.type, a_3.type), self.dist(a_1, a_3)])
+
+        return ub_vals
+
+    @property
+    def impropers(self):
+        i_angles = []
+
+        for quad in self.psf.impropers: # a_1 bonded to a_2, a_1 is central atom
+            a_1, a_2, a_3, a_4 = quad.atom1, quad.atom2, quad.atom3, quad.atom4
+            v1 = np.array(self.positions[a_3]) - np.array(self.positions[a_1])
+            v2 = np.array(self.positions[a_4]) - np.array(self.positions[a_1])
+            n = np.cross(v1, v2)
+
+            v3 = np.array(self.positions[a_2]) - np.array(self.positions[a_1])
+            prod = np.dot(n, v3)
+
+            if prod == 0:
+                angle = np.pi/2
+            else:
+                prod /= (np.linalg.norm(n) * np.linalg.norm(v3))
+                prod = np.clip(prod, -1, 1)
+                angle = np.pi/2 - np.arccos(prod)
+
+            i_angles.append([(a_1.type, a_2.type, a_3.type, a_4.type), np.degrees(angle)])
+
+        return i_angles
+
+    @property
     def dihedrals(self):
-        quads = self.get_quadruples()
-        print(len(quads))
         d_angles = []
+
         for quad in self.psf.dihedrals:
             a_1, a_2, a_3, a_4 = quad.atom1, quad.atom2, quad.atom3, quad.atom4
             v1 = np.array(self.positions[a_2]) - np.array(self.positions[a_1])
@@ -52,29 +85,33 @@ class Molecule(object):
                 prod = np.clip(prod, -1, 1)
                 angle = np.arccos(prod)
 
-            d_angles.append([(a_1.type, a_2.type, a_3.type), angle])
+            d_angles.append([(a_1.type, a_2.type, a_3.type), np.degrees(angle)])
 
         return d_angles
 
     @property
     def angles(self):
         angles = []
-        for c_atom in self.psf.atoms:
-            for i in range(len(c_atom.bonds)):
-                for j in range(i + 1, len(c_atom.bonds)):
-                    a_1 = self.get_other_atom(c_atom.bonds[i], c_atom)
-                    a_2 = self.get_other_atom(c_atom.bonds[j], c_atom)
 
-                    v1 = np.array(self.positions[a_1]) - np.array(self.positions[c_atom])
-                    v2 = np.array(self.positions[a_2]) - np.array(self.positions[c_atom])
+        for triplet in self.psf.angles:
+            c_atom = triplet.atom2
+            a_1 = triplet.atom1
+            a_2 = triplet.atom3
 
-                    prod = np.dot(v1, v2)
-                    prod /= (np.linalg.norm(v1) * np.linalg.norm(v2))
+            v1 = np.array(self.positions[a_1]) - np.array(self.positions[c_atom])
+            v2 = np.array(self.positions[a_2]) - np.array(self.positions[c_atom])
 
-                    prod = np.clip(prod, -1, 1)
+            prod = np.dot(v1, v2)
 
-                    angle = np.arccos(prod)
-                    angles.append([(a_1.type, c_atom.type, a_2.type), angle])
+            if prod == 0:
+                angle = 0
+            else:
+                prod /= (np.linalg.norm(v1) * np.linalg.norm(v2))
+                prod = np.clip(prod, -1, 1)
+                angle = np.arccos(prod)
+
+            angles.append([(a_1.type, c_atom.type, a_2.type), np.degrees(angle)])
+
         return angles
 
     @property
@@ -102,3 +139,5 @@ if __name__ == '__main__':
     print(m.bonds)
     print(m.angles)
     print(m.dihedrals)
+    print(m.impropers)
+    print(m.ub)
