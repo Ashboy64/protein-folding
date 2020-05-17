@@ -14,7 +14,7 @@ class StructurePredictor(object):
     Molecule m has properties:
     - m.bonds: list bonds and their lengths - [[('CE1', 'CE1'), 5], [...], ...]
     - m.angles: list of triples of atoms and angle wrt to central atom
-    - m.dihedrals: list of quadruples of atoms and dihedral angle
+    - m.dihedrals: list of quadruples of atoms and dihedral angle 
     - m.impropers: list of quadruples of atoms and angle for out of plane bending
     - m.ub: Urey-Bradley component for interaction between 1st and 3rd atoms in triplet. List of triples of atoms and 
             distance between them
@@ -37,11 +37,11 @@ class StructurePredictor(object):
             d_type = self.params.dihedral_types[(quad[0], quad[1], quad[2], quad[3])]
             total += d_type.phi_k * (1 + np.cos(d_type.per * d_angle - d_type.phase))
 
-        for quad, angle in m.bonds:
+        for quad, angle in m.impropers:
             i_type = self.params.improper_types[(quad[0], quad[1], quad[2], quad[3])]
             total += i_type.psi_k * ((angle - i_type.psi_eq) ** 2)
 
-        for triplet, dist in m.bonds:
+        for triplet, dist in m.ub:
             ub_type = self.params.urey_bradley_types[(triplet[0], triplet[1], triplet[2])]
             total += ub_type.k * ((dist - ub_type.req) ** 2)
 

@@ -1,8 +1,8 @@
 from parmed import load_file
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
 
-params = CharmmParameterSet()
-params.read_topology_file(r'../params/top_all36_prot.rtf')
+params = CharmmParameterSet(r'../params/par_all36m_prot.prm')
+psf = load_file(r'../pdb-files/step1_pdbreader.psf')
 
-psf = load_file('../pdb-files/step1_pdbreader.pdb')
-print(psf.__dict__)
+print(params.cmap_types[('C', 'NH1', 'CT1', 'C', 'NH1', 'CT1', 'C', 'NH1')].grid.__dict__)
+
