@@ -10,9 +10,9 @@ class Molecule(object):
         super(Molecule, self).__init__()
         self.psf = pmd.load_file(psf_filepath)
         self.params = CharmmParameterSet(param_filepath)
-        self.initialize_positions()
+        self.initialize()
 
-    def initialize_positions(self):
+    def initialize(self):
         not_in_params = []
         self.positions = {}
 
@@ -22,11 +22,41 @@ class Molecule(object):
             if atom.type not in self.params.atom_types.keys():
                 not_in_params.append(atom.name)
             else:
-                self.positions[atom] = [2*np.random.uniform(), 2*np.random.uniform(), 2*np.random.uniform()]
+                self.positions[atom] = [100*np.random.uniform(), 100*np.random.uniform(), 100*np.random.uniform()]
                 counter += 1
 
         if len(not_in_params) != 0:
             print("not_in_params: " + str(not_in_params))
+
+        # Keep track of which pairs are nonbonded
+        self.nonbonded_pairs = []
+
+        for i in range(len(self.psf.atoms)):
+            for j in range(len(self.psf.atoms)):
+                if i != j:
+                    self.nonbonded_pairs.append((self.psf.atoms[i], self.psf.atoms[j]))
+
+        for angle in self.psf.angles:
+            if (angle.atom1, angle.atom2) in self.nonbonded_pairs:
+                self.nonbonded_pairs.remove((angle.atom1, angle.atom2))
+            if (angle.atom2, angle.atom1) in self.nonbonded_pairs:
+                self.nonbonded_pairs.remove((angle.atom2, angle.atom1))
+            if (angle.atom2, angle.atom3) in self.nonbonded_pairs:
+                self.nonbonded_pairs.remove((angle.atom2, angle.atom3))
+            if (angle.atom3, angle.atom2) in self.nonbonded_pairs:
+                self.nonbonded_pairs.remove((angle.atom3, angle.atom2))
+            if (angle.atom1, angle.atom3) in self.nonbonded_pairs:
+                self.nonbonded_pairs.remove((angle.atom1, angle.atom3))
+            if (angle.atom3, angle.atom1) in self.nonbonded_pairs:
+                self.nonbonded_pairs.remove((angle.atom3, angle.atom1))
+
+    @property
+    def nonbonded(self):
+        out = []
+        for pair in self.nonbonded_pairs:
+            out.append([(pair[0].type, pair[1].type), self.dist(pair[0], pair[1])])
+
+        return out
 
     @property
     def ub(self):
@@ -85,7 +115,7 @@ class Molecule(object):
                 prod = np.clip(prod, -1, 1)
                 angle = np.arccos(prod)
 
-            d_angles.append([(a_1.type, a_2.type, a_3.type), np.degrees(angle)])
+            d_angles.append([(a_1.type, a_2.type, a_3.type, a_4.type), np.degrees(angle)])
 
         return d_angles
 
@@ -135,7 +165,7 @@ class Molecule(object):
 
 
 if __name__ == '__main__':
-    m = Molecule(r'../pdb-files/step1_pdbreader.psf', r'../params/par_all36m_prot.prm')
+    m = Molecule(r'../pdb-files/1l2y.psf', r'../params/par_all36m_prot.prm')
     print(m.bonds)
     print(m.angles)
     print(m.dihedrals)

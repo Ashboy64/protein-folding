@@ -1,6 +1,7 @@
 import numpy as np
-import parmed as pmd
 from parmed.charmm import CharmmParameterSet
+
+from src.molecule import Molecule
 
 
 class StructurePredictor(object):
@@ -28,16 +29,24 @@ class StructurePredictor(object):
             b_type = self.params.bond_types[(bond[0], bond[1])]
             total += b_type.k * ((length - b_type.req) ** 2)
 
-        for triplet, angle in m.bonds:
+        for triplet, angle in m.angles:
             a_type = self.params.angle_types[(triplet[0], triplet[1], triplet[2])]
-            total += a_type.k * ((angle - a_type.thetaeq) ** 2)
+            total += a_type.k * ((angle - a_type.theteq) ** 2)
 
         for quad, d_angle in m.dihedrals:
-            d_type = self.params.dihedral_types[(quad[0], quad[1], quad[2], quad[3])]
+            if quad in self.params.dihedral_types.keys():
+                d_type = self.params.dihedral_types[(quad[0], quad[1], quad[2], quad[3])][0]
+            else:
+                d_type = self.params.dihedral_types[('X', quad[1], quad[2], 'X')][0]
             total += d_type.phi_k * (1 + np.cos(d_type.per * d_angle - d_type.phase))
 
         for quad, angle in m.impropers:
-            i_type = self.params.improper_types[(quad[0], quad[1], quad[2], quad[3])]
+            if (quad[0], quad[1], quad[2], quad[3]) in self.params.improper_types.keys():
+                i_type = self.params.improper_types[(quad[0], quad[1], quad[2], quad[3])]
+            elif (quad[0], 'X', 'X', quad[3]) in self.params.improper_types.keys():
+                i_type = self.params.improper_types[(quad[0], 'X', 'X', quad[3])]
+            else:
+                i_type = self.params.improper_types[(quad[3], 'X', 'X', quad[0])]
             total += i_type.psi_k * ((angle - i_type.psi_eq) ** 2)
 
         for triplet, dist in m.ub:
@@ -63,5 +72,10 @@ class StructurePredictor(object):
 
 
 if __name__ == '__main__':
-    sp = StructurePredictor(r'../params/par_all22_prot.prm')
-    pdb = pmd.load_file(r'../pdb-files/1l2y.pdb')
+    sp = StructurePredictor(r'../params/par_all36m_prot.prm')
+    m = Molecule(r'../pdb-files/5awl.psf', r'../params/par_all36m_prot.prm')
+
+    print("Initialized molecule")
+    print()
+
+    print(sp.eval_energy(m))
