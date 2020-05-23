@@ -1,15 +1,16 @@
-import numpy as np
+import autograd.numpy as np
 from parmed.charmm import CharmmParameterSet
-
+from autograd import grad
 from src.molecule import Molecule
 
 
 class StructurePredictor(object):
     """Predict protein structure"""
 
-    def __init__(self, param_filepath):
+    def __init__(self, molecule, param_filepath):
         super(StructurePredictor, self).__init__()
         self.params = CharmmParameterSet(param_filepath)
+        self.m = molecule
 
     """
     Molecule m has properties:
@@ -22,8 +23,10 @@ class StructurePredictor(object):
     - m.nonbonded: list of pairs of atoms separated by at least 3 bonds
     """
 
-    def eval_energy(self, m):
+    def eval_energy(self, positions):
         total = 0
+        self.m.update_positions(positions)
+        m = self.m
 
         for bond, length in m.bonds:
             b_type = self.params.bond_types[(bond[0], bond[1])]
@@ -72,10 +75,18 @@ class StructurePredictor(object):
 
 
 if __name__ == '__main__':
-    sp = StructurePredictor(r'../params/par_all36m_prot.prm')
     m = Molecule(r'../pdb-files/5awl.psf', r'../params/par_all36m_prot.prm')
+    sp = StructurePredictor(m, r'../params/par_all36m_prot.prm')
+
+    positions = [pos for pos in m.positions.values()]
 
     print("Initialized molecule")
-    print()
+    grad_func = grad(sp.eval_energy)
 
-    print(sp.eval_energy(m))
+    for i in range(30):
+        print(sp.eval_energy(positions))
+
+        gradient = grad_func(positions)
+        positions = [[positions[i][0] - 1e-5 * float(gradient[i][0]),
+                      positions[i][1] - 1e-5 * float(gradient[i][1]),
+                      positions[i][2] - 1e-5 * float(gradient[i][2])] for i in range(len(positions))]

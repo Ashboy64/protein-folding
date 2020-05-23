@@ -1,4 +1,4 @@
-import numpy as np
+import autograd.numpy as np
 import parmed as pmd
 from parmed.charmm import CharmmParameterSet
 
@@ -6,13 +6,13 @@ from parmed.charmm import CharmmParameterSet
 class Molecule(object):
     """Represents a molecule"""
 
-    def __init__(self, psf_filepath, param_filepath):
+    def __init__(self, psf_filepath, param_filepath, positions=None):
         super(Molecule, self).__init__()
         self.psf = pmd.load_file(psf_filepath)
         self.params = CharmmParameterSet(param_filepath)
-        self.initialize()
+        self.initialize(positions)
 
-    def initialize(self):
+    def initialize(self, positions):
         not_in_params = []
         self.positions = {}
 
@@ -22,7 +22,11 @@ class Molecule(object):
             if atom.type not in self.params.atom_types.keys():
                 not_in_params.append(atom.name)
             else:
-                self.positions[atom] = [100*np.random.uniform(), 100*np.random.uniform(), 100*np.random.uniform()]
+                if positions is not None:
+                    self.positions[atom] = positions[counter]
+                else:
+                    self.positions[atom] = [counter * np.random.uniform(0, 1), counter * np.random.uniform(0, 1),
+                                            counter * np.random.uniform(0, 1)]
                 counter += 1
 
         if len(not_in_params) != 0:
@@ -50,6 +54,19 @@ class Molecule(object):
             if (angle.atom3, angle.atom1) in self.nonbonded_pairs:
                 self.nonbonded_pairs.remove((angle.atom3, angle.atom1))
 
+    def random_unit_normal(self):
+        arr = np.random.uniform(-1, 0, 3)
+        return list(arr / np.linalg.norm(arr))
+
+    def update_positions(self, new_pos):
+        self.positions = {}
+
+        counter = 0
+
+        for atom in self.psf.atoms:
+            self.positions[atom] = new_pos[counter]
+            counter += 1
+
     @property
     def nonbonded(self):
         out = []
@@ -72,7 +89,7 @@ class Molecule(object):
     def impropers(self):
         i_angles = []
 
-        for quad in self.psf.impropers: # a_1 bonded to a_2, a_1 is central atom
+        for quad in self.psf.impropers:  # a_1 bonded to a_2, a_1 is central atom
             a_1, a_2, a_3, a_4 = quad.atom1, quad.atom2, quad.atom3, quad.atom4
             v1 = np.array(self.positions[a_3]) - np.array(self.positions[a_1])
             v2 = np.array(self.positions[a_4]) - np.array(self.positions[a_1])
@@ -82,11 +99,11 @@ class Molecule(object):
             prod = np.dot(n, v3)
 
             if prod == 0:
-                angle = np.pi/2
+                angle = np.pi / 2
             else:
                 prod /= (np.linalg.norm(n) * np.linalg.norm(v3))
                 prod = np.clip(prod, -1, 1)
-                angle = np.pi/2 - np.arccos(prod)
+                angle = np.pi / 2 - np.arccos(prod)
 
             i_angles.append([(a_1.type, a_2.type, a_3.type, a_4.type), np.degrees(angle)])
 
@@ -161,7 +178,7 @@ class Molecule(object):
     def dist(self, a1, a2):
         a1_x, a1_y, a1_z = self.positions[a1]
         a2_x, a2_y, a2_z = self.positions[a2]
-        return np.sqrt((a1_x - a2_x)**2 + (a1_y - a2_y)**2 + (a1_z - a2_z)**2)
+        return np.sqrt((a1_x - a2_x) ** 2 + (a1_y - a2_y) ** 2 + (a1_z - a2_z) ** 2)
 
 
 if __name__ == '__main__':
