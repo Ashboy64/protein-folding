@@ -6,10 +6,11 @@ from parmed.charmm import CharmmParameterSet
 class Molecule(object):
     """Represents a molecule"""
 
-    def __init__(self, psf_filepath, param_filepath, positions=None):
+    def __init__(self, psf_filepath, param_filepath, crds=None, positions=None):
         super(Molecule, self).__init__()
         self.psf = pmd.load_file(psf_filepath)
         self.params = CharmmParameterSet(param_filepath)
+        self.crds = crds
         self.initialize(positions)
 
     def initialize(self, positions):
@@ -18,16 +19,20 @@ class Molecule(object):
 
         counter = 0
 
-        for atom in self.psf.atoms:
-            if atom.type not in self.params.atom_types.keys():
-                not_in_params.append(atom.name)
-            else:
-                if positions is not None:
-                    self.positions[atom] = positions[counter]
+        if self.crds is not None:
+            for atom in self.crds.atoms:
+                self.positions[atom] = [atom.xx, atom.xy, atom.xz]
+        else:
+            for atom in self.psf.atoms:
+                if atom.type not in self.params.atom_types.keys():
+                    not_in_params.append(atom.name)
                 else:
-                    self.positions[atom] = [counter * np.random.uniform(0, 1), counter * np.random.uniform(0, 1),
-                                            counter * np.random.uniform(0, 1)]
-                counter += 1
+                    if positions is not None:
+                        self.positions[atom] = positions[counter]
+                    else:
+                        self.positions[atom] = [counter * np.random.uniform(0, 1), counter * np.random.uniform(0, 1),
+                                                counter * np.random.uniform(0, 1)]
+                    counter += 1
 
         if len(not_in_params) != 0:
             print("not_in_params: " + str(not_in_params))
@@ -151,7 +156,7 @@ class Molecule(object):
             prod = np.dot(v1, v2)
 
             if prod == 0:
-                angle = 0
+                angle = np.pi/2
             else:
                 prod /= (np.linalg.norm(v1) * np.linalg.norm(v2))
                 prod = np.clip(prod, -1, 1)
