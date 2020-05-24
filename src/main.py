@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 from parmed.charmm import CharmmParameterSet
 from autograd import grad
-from src.molecule import Molecule
+from molecule import Molecule
 
 
 class StructurePredictor(object):
@@ -111,6 +111,7 @@ def optimize(m, sp):
 
 
 if __name__ == '__main__':
+
     m = Molecule(r'../pdb-files/ala5.psf', r'../params/par_all36m_prot.prm')
     sp = StructurePredictor(m, r'../params/par_all36m_prot.prm')
 
