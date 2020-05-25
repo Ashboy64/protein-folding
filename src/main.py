@@ -101,7 +101,7 @@ def optimize(m, sp):
     print("Initialized molecule")
     grad_func = grad(sp.eval_energy)
 
-    for i in range(200):
+    for i in range(400):
         print(sp.eval_energy(positions))
 
         gradient = grad_func(positions)
